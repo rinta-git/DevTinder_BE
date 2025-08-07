@@ -1,0 +1,15 @@
+{
+  "name": "devtinder_be",
+  "version": "1.0.0",
+  "description": "Backend application for devTinder app using nodejs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "author": "Rinta Roy",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
