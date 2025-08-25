@@ -1,33 +1,32 @@
-const express = require('express');
-
-const { authAdmin, authUser } = require('./middlewares/auth');
-
+const express = require("express");
+const devTinderDB = require("./config/database");
+const User = require("./models/user");
 const app = express();
 
-app.use("/admin", authAdmin)
+app.post("/signUp", async (req, res) => {
+  const user = new User({
+    email: "xxxx@gmail.com",
+    password: "xxxpassword",
+    firstName: "xxx",
+    lastName: "xxxUser",
+    gender: "Male",
+  });
 
-app.get("/admin/getAllData", (req, res) => {
-  res.send("All admin data");
-});
-
-app.delete("/admin/deleteData", (req, res) => {
-  res.send("Admin data deleted");
-});
-
-app.get("/users/getUsers", authUser, (req, res) => {
-  res.send({ firstName: "John", lastName: "Doe" });
-})
-
-app.get("/users", (req, res) => {
-    throw new Error("Test error");
-})
-
-app.use("/", (err, req, res) => {
-  if(err){
-    res.status(500).send("Internal Server Error");
+  try {
+    await user.save();
+    res.send("User signed up successfully");
+  } catch (err) {
+    res.status(500).send("Error signing up user");
   }
 });
 
-app.listen(3000, () => {
-  console.log('Server is running on port 3000...');
-});
+devTinderDB()
+  .then(() => {
+    console.log("Database connected");
+    app.listen(3000, () => {
+      console.log("Server is running on port 3000...");
+    });
+  })
+  .catch((error) => {
+    console.error("Error connecting to the database:", error);
+  });
