@@ -54,7 +54,29 @@ app.get("/users", async(req, res) => {
   }
 })
 
+//delete one user
+app.delete("/user", async (req, res) => {
+  const userId  = req.body.userId;
+  try{
+    await User.findByIdAndDelete(userId);
+    res.send("User deleted successfully");
+  }catch(err) {
+    res.status(500).send("Error deleting user");
+  }
+})
 
+//update
+app.patch("/updateUser", async (req, res) => {
+  const userId =  req.body.userId;
+
+  try{
+   const data =  await User.findByIdAndUpdate(userId, req.body, {returnDocument: "after"});
+   console.log(data);
+    res.send("User updated successfully");
+  }catch(err){
+    res.status(500).send("Error updating user");
+  }
+})
 
 devTinderDB()
   .then(() => {
