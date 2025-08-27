@@ -1,6 +1,7 @@
 const express = require("express");
 const devTinderDB = require("./config/database");
 const User = require("./models/user");
+const { isUpdateAllowed } = require("./utils/validations");
 const app = express();
 
 app.use(express.json()); //middleware to convert json body to javascript object. It runs for all incoming requests.
@@ -12,71 +13,77 @@ app.post("/signUp", async (req, res) => {
     await user.save();
     res.send("User signed up successfully");
   } catch (err) {
-    res.status(500).send("Error signing up user");
+    res.status(500).send("Error signing up user: " + err.message);
   }
 });
 
-app.get("/user", async(req, res) => {
+app.get("/user", async (req, res) => {
   const userName = req.body.firstName;
-  try{
-    const resp = await User.findOne({firstName:userName}) //To get one user that has common name
-    if(!resp){
-      return res.status(404).send("Users not found")
+  try {
+    const resp = await User.findOne({ firstName: userName }); //To get one user that has common name
+    if (!resp) {
+      return res.status(404).send("Users not found");
     }
-    res.send(resp)
-  }catch (err){
+    res.send(resp);
+  } catch (err) {
     res.status(400).send("Something went wrong!");
   }
-})
+});
 
-app.get("/user", async(req, res) => {
-  const userEmail = req.body.email
-  try{
-    const resp = await User.find({email: userEmail}) //To get one specific user
-    if(resp.length === 0){
-      return res.status(404).send("User not found")
+app.get("/user", async (req, res) => {
+  const userEmail = req.body.email;
+  try {
+    const resp = await User.find({ email: userEmail }); //To get one specific user
+    if (resp.length === 0) {
+      return res.status(404).send("User not found");
     }
-    res.send(resp)
-  }catch (err){
+    res.send(resp);
+  } catch (err) {
     res.status(400).send("Something went wrong!");
   }
-})
+});
 
-app.get("/users", async(req, res) => {
-  try{
-    const resp = await User.find({}) //To get all users
-    if(resp.length === 0){
-      return res.status(404).send("Users not found")
+app.get("/users", async (req, res) => {
+  try {
+    const resp = await User.find({}); //To get all users
+    if (resp.length === 0) {
+      return res.status(404).send("Users not found");
     }
-    res.send(resp)
-  }catch (err){
+    res.send(resp);
+  } catch (err) {
     res.status(400).send("Something went wrong!");
   }
-})
+});
 
 //delete one user
 app.delete("/user", async (req, res) => {
-  const userId  = req.body.userId;
-  try{
+  const userId = req.body.userId;
+  try {
     await User.findByIdAndDelete(userId);
     res.send("User deleted successfully");
-  }catch(err) {
+  } catch (err) {
     res.status(500).send("Error deleting user");
   }
-})
+});
 
 //update
-app.patch("/updateUser", async (req, res) => {
-  const userId =  req.body.userId;
+app.patch("/updateUser/:userId", async (req, res) => {
+  const userId = req.params.userId;
 
-  try{
-   const data =  await User.findByIdAndUpdate(userId, req.body, {returnDocument: "after"});
-   console.log(data);
+  try {
+    if (!isUpdateAllowed(userId, req)) {
+      throw new Error("Update of the field(s) is/are not allowed");
+    }
+    const data = await User.findByIdAndUpdate(userId, req.body, {
+      returnDocument: "after",
+      runValidators: true,
+    });
+    console.log(data);
     res.send("User updated successfully");
-  }catch(err){
-    res.status(500).send("Error updating user");
+  } catch (err) {
+    res.status(500).send("Error updating user: " + err.message);
   }
-})
+});
 
 devTinderDB()
   .then(() => {
