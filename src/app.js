@@ -1,19 +1,57 @@
 const express = require("express");
 const devTinderDB = require("./config/database");
 const User = require("./models/user");
-const { isUpdateAllowed } = require("./utils/validations");
+const {
+  isUpdateAllowed,
+  validateSignUp,
+  validateLogin,
+} = require("./utils/validations");
+const bcrypt = require("bcrypt");
+
 const app = express();
 
 app.use(express.json()); //middleware to convert json body to javascript object. It runs for all incoming requests.
 
 app.post("/signUp", async (req, res) => {
-  const user = new User(req.body);
+  const { firstName, email, password } = req.body;
 
   try {
-    await user.save();
+    validateSignUp(req);
+
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      firstName,
+      email,
+      password: encryptedPassword,
+    });
+
+    await user.save({ runValidators: true });
     res.send("User signed up successfully");
   } catch (err) {
     res.status(500).send("Error signing up user: " + err.message);
+  }
+});
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    validateLogin(req);
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).send("Invalid credentials");
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return res.status(404).send("Invalid credentials");
+    }
+
+    res.send("User logged in successfully");
+  } catch (err) {
+    res.status(500).send("Error logging in user: " + err.message);
   }
 });
 

@@ -48,6 +48,7 @@ const userSchema = new mongoose.Schema(
     },
     skill: {
       type: [String],
+      default: ['html'],
       validate: {
         validator: function (value) {
           return value && value.length > 0 && value.length <= 5;
