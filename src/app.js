@@ -9,6 +9,7 @@ const {
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 
 const app = express();
 
@@ -52,9 +53,9 @@ app.post("/login", async (req, res) => {
       return res.status(404).send("Invalid credentials");
     }else{
       //create jwt
-      const token = jwt.sign({ userId:user._id}, "devTinder#RR$2025")
+      const token = jwt.sign({ userId:user._id}, "devTinder#RR$2025", {expiresIn:"7d"})
       //add the token to cookie
-      res.cookie("token", token);
+      res.cookie("token", token, {expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), httpOnly:true});
       //send the response
       res.send("User logged in successfully");
     }
@@ -63,65 +64,23 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
+app.get("/profile", userAuth, async (req, res) => {
   try{
-    const cookies = req.cookies;
-    const { token } = cookies;
-    if(!token){
-      throw new Error("Authentication token is missing");
-    }
-    const decodedUser = await jwt.verify(token, "devTinder#RR$2025");
-    const userId = decodedUser.userId;
-
-    const user = await User.findById(userId);
-
-    if(!user){
-      throw new Error("User does not exist");
-    }
-
-    res.send(user);
+    res.send(req.user);
   }catch(err){
     res.status(500).send("Error fetching profile: " + err.message);
   }
 })
 
-app.get("/user", async (req, res) => {
-  const userName = req.body.firstName;
-  try {
-    const resp = await User.findOne({ firstName: userName }); //To get one user that has common name
-    if (!resp) {
-      return res.status(404).send("Users not found");
-    }
-    res.send(resp);
-  } catch (err) {
-    res.status(400).send("Something went wrong!");
-  }
-});
+app.get("/sendFriendRequest", userAuth, async(req, res) => {
+  try{
+    const user = req.user;
+    console.log(user);
 
-app.get("/user", async (req, res) => {
-  const userEmail = req.body.email;
-  try {
-    const resp = await User.find({ email: userEmail }); //To get one specific user
-    if (resp.length === 0) {
-      return res.status(404).send("User not found");
-    }
-    res.send(resp);
-  } catch (err) {
-    res.status(400).send("Something went wrong!");
+  }catch(err){
+    res.status(500).send("Error sending friend request: " + err.message);
   }
-});
-
-app.get("/users", async (req, res) => {
-  try {
-    const resp = await User.find({}); //To get all users
-    if (resp.length === 0) {
-      return res.status(404).send("Users not found");
-    }
-    res.send(resp);
-  } catch (err) {
-    res.status(400).send("Something went wrong!");
-  }
-});
+})
 
 //delete one user
 app.delete("/user", async (req, res) => {
