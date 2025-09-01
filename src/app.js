@@ -46,16 +46,16 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(404).send("Invalid credentials");
     }
-    
-    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    const isValidPassword = await user.validatePassword(password);
 
     if (!isValidPassword) {
       return res.status(404).send("Invalid credentials");
     }else{
       //create jwt
-      const token = jwt.sign({ userId:user._id}, "devTinder#RR$2025", {expiresIn:"7d"})
+      const token = await user.getJWTToken();
       //add the token to cookie
-      res.cookie("token", token, {expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), httpOnly:true});
+      res.cookie("token", token, {expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)});
       //send the response
       res.send("User logged in successfully");
     }
