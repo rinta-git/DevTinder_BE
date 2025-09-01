@@ -7,10 +7,13 @@ const {
   validateLogin,
 } = require("./utils/validations");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 app.use(express.json()); //middleware to convert json body to javascript object. It runs for all incoming requests.
+app.use(cookieParser()); //middleware to parse cookies from the request
 
 app.post("/signUp", async (req, res) => {
   const { firstName, email, password } = req.body;
@@ -42,18 +45,45 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(404).send("Invalid credentials");
     }
-
+    
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
       return res.status(404).send("Invalid credentials");
+    }else{
+      //create jwt
+      const token = jwt.sign({ userId:user._id}, "devTinder#RR$2025")
+      //add the token to cookie
+      res.cookie("token", token);
+      //send the response
+      res.send("User logged in successfully");
     }
-
-    res.send("User logged in successfully");
   } catch (err) {
     res.status(500).send("Error logging in user: " + err.message);
   }
 });
+
+app.get("/profile", async (req, res) => {
+  try{
+    const cookies = req.cookies;
+    const { token } = cookies;
+    if(!token){
+      throw new Error("Authentication token is missing");
+    }
+    const decodedUser = await jwt.verify(token, "devTinder#RR$2025");
+    const userId = decodedUser.userId;
+
+    const user = await User.findById(userId);
+
+    if(!user){
+      throw new Error("User does not exist");
+    }
+
+    res.send(user);
+  }catch(err){
+    res.status(500).send("Error fetching profile: " + err.message);
+  }
+})
 
 app.get("/user", async (req, res) => {
   const userName = req.body.firstName;
